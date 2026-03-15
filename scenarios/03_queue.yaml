@@ -1,0 +1,239 @@
+name: "Queue Modes"
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  # ===== Q1. 命令解析 =====
+
+  # Q-01: 查看当前队列模式
+  - send: "/queue"
+    tag: "Q-01"
+
+  # Q-02: 切换到 followup
+  - send: "/queue followup"
+    expect_contains: "Followup"
+    tag: "Q-02"
+
+  # Q-03: 切换到 collect
+  - send: "/queue collect"
+    expect_contains: "Collect"
+    tag: "Q-03"
+
+  # Q-04: 切换到 steer
+  - send: "/queue steer"
+    expect_contains: "Steer"
+    tag: "Q-04"
+
+  # Q-05: 切换到 interrupt
+  - send: "/queue interrupt"
+    expect_contains: "Interrupt"
+    tag: "Q-05"
+
+  # Q-06: spec 缩写
+  - send: "/queue spec"
+    expect_contains: "Speculative"
+    tag: "Q-06"
+
+  # Q-07: speculative 全称
+  - send: "/queue speculative"
+    expect_contains: "Speculative"
+    tag: "Q-07"
+
+  # Q-08: 未知模式
+  - send: "/queue banana"
+    expect_contains: "Unknown"
+    tag: "Q-08"
+
+  # ===== Q2. Followup 模式行为 =====
+  # Q-09: 快速连续 3 条消息，每条独立回复
+  # 注意：settle_timeout=2 让发送间隔缩短，但仍是顺序的。
+  # 实际 followup 行为（按序排队）需结合 report 人工确认。
+
+  - send: "/queue followup"
+    tag: "Q-09-pre"
+
+  - send: "问题A：1+1等于几"
+    tag: "Q-09a"
+    settle_timeout: 2
+    max_wait: 120
+
+  - send: "问题B：2+2等于几"
+    tag: "Q-09b"
+    settle_timeout: 2
+    max_wait: 120
+
+  - send: "问题C：3+3等于几"
+    tag: "Q-09c"
+    max_wait: 120
+
+  # ===== Q3. Collect 模式行为 =====
+  # Q-10: 发长问题，处理期间追加 2 条，后 2 条应被合并处理
+  # 注意：第一条需要较长处理时间，settle_timeout=1 让追加消息快速发出
+
+  - send: "/queue collect"
+    tag: "Q-10-pre"
+
+  - send: "请详细解释量子计算的基本原理，包括量子比特、量子门和量子纠缠"
+    tag: "Q-10a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "补充：特别是量子纠缠"
+    tag: "Q-10b"
+    settle_timeout: 1
+    max_wait: 3
+
+  - send: "还有量子叠加"
+    tag: "Q-10c"
+    max_wait: 180
+
+  # ===== Q4. Steer 模式行为 =====
+  # Q-11: 发长问题，处理期间追加 2 条，只处理最后一条
+
+  - send: "/queue steer"
+    tag: "Q-11-pre"
+
+  - send: "请详细解释TCP协议的三次握手过程，包括SYN、SYN-ACK和ACK的细节"
+    tag: "Q-11a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "不对，换一个话题"
+    tag: "Q-11b"
+    settle_timeout: 1
+    max_wait: 3
+
+  - send: "讲讲Rust的所有权机制"
+    tag: "Q-11c"
+    max_wait: 180
+    on_response:
+      - contains: "所有权"
+        steps:
+          - tag: "Q-11:PASS steer took last message"
+      - contains: "ownership"
+        steps:
+          - tag: "Q-11:PASS steer took last message"
+      - default:
+          steps:
+            - tag: "Q-11:CHECK manually verify steer behavior"
+
+  # ===== Q5. Interrupt 模式行为 =====
+  # Q-12: 发长任务，处理期间发中断消息
+
+  - send: "/queue interrupt"
+    tag: "Q-12-pre"
+
+  - send: "请写一篇关于人工智能发展历史的详细文章，从1950年图灵测试开始"
+    tag: "Q-12a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "停！换一个话题：什么是Rust"
+    tag: "Q-12b"
+    max_wait: 180
+    on_response:
+      - contains: "Rust"
+        steps:
+          - tag: "Q-12:PASS interrupt worked"
+      - default:
+          steps:
+            - tag: "Q-12:CHECK manually verify interrupt"
+
+  # ===== Q6. Speculative 模式行为 =====
+  # Q-13/Q-14: 发长任务，处理期间发第二条独立问题，两条应并行处理
+
+  - send: "/queue spec"
+    tag: "Q-13-pre"
+
+  - send: "请解释微积分中的基本定理，包括牛顿-莱布尼茨公式"
+    tag: "Q-13a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "Rust和Go有什么区别"
+    tag: "Q-13b"
+    max_wait: 180
+
+  # Q-14: 验证两条回复独立（人工在 report 中确认）
+  - send: "/queue"
+    tag: "Q-14"
+
+  # ===== Q7. 模式切换一致性 =====
+
+  # Q-15: followup 设置后查看
+  - send: "/queue followup"
+    tag: "Q-15-set"
+
+  - send: "/queue"
+    expect_contains: "Followup"
+    tag: "Q-15"
+
+  # Q-16: collect 设置后查看
+  - send: "/queue collect"
+    tag: "Q-16-set"
+
+  - send: "/queue"
+    expect_contains: "Collect"
+    tag: "Q-16"
+
+  # Q-17: spec 设置后查看
+  - send: "/queue spec"
+    tag: "Q-17-set"
+
+  - send: "/queue"
+    expect_contains: "Speculative"
+    tag: "Q-17"
+
+  # ===== Q8. 各模式排斥性验证 =====
+
+  # Q-18: followup 连续 2 条，不合并、不丢弃、不并行
+  - send: "/queue followup"
+    tag: "Q-18-pre"
+
+  - send: "问题X：什么是HTML"
+    tag: "Q-18a"
+    settle_timeout: 2
+    max_wait: 120
+
+  - send: "问题Y：什么是CSS"
+    tag: "Q-18b"
+    max_wait: 120
+
+  # Q-19: steer 连续 3 条，只处理最新一条
+  - send: "/queue steer"
+    tag: "Q-19-pre"
+
+  - send: "请解释什么是机器学习中的梯度下降算法，要非常详细"
+    tag: "Q-19a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "中间消息：这条应该被丢弃"
+    tag: "Q-19b"
+    settle_timeout: 1
+    max_wait: 3
+
+  - send: "最终消息：什么是JSON"
+    tag: "Q-19c"
+    max_wait: 120
+    on_response:
+      - contains: "JSON"
+        steps:
+          - tag: "Q-19:PASS steer kept last only"
+      - default:
+          steps:
+            - tag: "Q-19:CHECK manually verify"
+
+  # Q-20: collect 空闲时发 1 条，应直接处理不等待合并
+  - send: "/queue collect"
+    tag: "Q-20-pre"
+
+  - send: "什么是YAML"
+    tag: "Q-20"
+    max_wait: 120
+
+  # ===== Cleanup =====
+  - send: "/queue spec"
+    tag: "CLEANUP"

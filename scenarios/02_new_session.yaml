@@ -1,0 +1,135 @@
+name: "Session Management"
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  # ===== N1. 基本会话操作 =====
+
+  # N-01: 清除当前会话
+  - send: "/new"
+    expect_contains: "Session cleared"
+    tag: "N-01"
+
+  # N-02: 清除后不应记得之前内容
+  - send: "我之前问了什么？"
+    expect_not_contains: "苹果"
+    tag: "N-02"
+    max_wait: 120
+
+  # N-03: 创建 research 会话
+  - send: "/new research"
+    expect_contains: "research"
+    tag: "N-03"
+
+  # N-04: 在 research 中种下记忆
+  - send: "记住关键词：苹果"
+    tag: "N-04"
+    max_wait: 120
+
+  # N-05: 创建 coding 会话
+  - send: "/new coding"
+    expect_contains: "coding"
+    tag: "N-05"
+
+  # N-06: coding 中不应知道 research 的内容（会话隔离）
+  - send: "我之前说的关键词是什么？"
+    expect_not_contains: "苹果"
+    tag: "N-06"
+    max_wait: 120
+
+  # ===== N2. 会话切换与上下文保持 =====
+
+  # N-07: 切回 research
+  - send: "/s research"
+    expect_contains: "research"
+    tag: "N-07"
+
+  # N-08: research 应记得"苹果"
+  - send: "我之前说的关键词是什么？"
+    tag: "N-08"
+    max_wait: 120
+    on_response:
+      - contains: "苹果"
+        steps:
+          - tag: "N-08:PASS"
+      - default:
+          steps:
+            - tag: "N-08:FAIL context lost"
+
+  # N-09: 无参数切回默认会话
+  - send: "/s"
+    expect_contains: "default"
+    tag: "N-09"
+
+  # ===== N3. 会话列表与导航 =====
+
+  # N-10: 查看会话列表，应包含 research 和 coding
+  - send: "/sessions"
+    tag: "N-10"
+
+  # N-11: 切换到上一个会话
+  - send: "/back"
+    tag: "N-11"
+
+  # N-12: 再次 /back
+  - send: "/back"
+    tag: "N-12"
+
+  # ===== N4. 会话删除 =====
+
+  # N-13: 删除 coding
+  - send: "/delete coding"
+    expect_contains: "Deleted"
+    tag: "N-13"
+
+  # N-14: 确认 coding 已不在列表中
+  - send: "/sessions"
+    expect_not_contains: "coding"
+    tag: "N-14"
+
+  # N-15: 无参数 /delete 应提示用法
+  - send: "/delete"
+    tag: "N-15"
+
+  # ===== N5. 输入验证 =====
+
+  # N-16: 含 # 的名称
+  - send: "/new a#b"
+    expect_contains: "Invalid"
+    tag: "N-16"
+
+  # N-17: 含 : 的名称
+  - send: "/new a:b"
+    expect_contains: "Invalid"
+    tag: "N-17"
+
+  # N-18: 含 / 的名称
+  - send: "/new a/b"
+    expect_contains: "Invalid"
+    tag: "N-18"
+
+  # N-19: 超过 50 字符的名称
+  - send: "/new aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    expect_contains: "Invalid"
+    tag: "N-19"
+
+  # N-20: 中文名称应被接受
+  - send: "/new 测试中文"
+    expect_contains: "测试中文"
+    tag: "N-20"
+
+  # ===== N6. 清理 =====
+
+  # N-21: 删除 research
+  - send: "/delete research"
+    tag: "N-21"
+
+  # N-22: 删除中文名称会话
+  - send: "/delete 测试中文"
+    tag: "N-22"
+
+  # N-23: 切回默认会话
+  - send: "/s"
+    tag: "N-23"

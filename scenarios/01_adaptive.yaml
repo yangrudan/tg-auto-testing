@@ -1,0 +1,173 @@
+name: "Adaptive Routing"
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  # ===== A1. 命令解析与状态显示 =====
+
+  # A-01: 查看状态面板
+  - send: "/adaptive"
+    expect_contains: "Adaptive"
+    tag: "A-01"
+
+  # A-02: 切换到 off
+  - send: "/adaptive off"
+    expect_contains: "off"
+    tag: "A-02"
+
+  # A-03: 切换到 hedge
+  - send: "/adaptive hedge"
+    expect_contains: "hedge"
+    tag: "A-03"
+
+  # A-04: 切换到 lane
+  - send: "/adaptive lane"
+    expect_contains: "lane"
+    tag: "A-04"
+
+  # A-05: race 是 hedge 的别名
+  - send: "/adaptive race"
+    expect_contains: "hedge"
+    tag: "A-05"
+
+  # A-06: circuit 是 hedge 的别名
+  - send: "/adaptive circuit"
+    expect_contains: "hedge"
+    tag: "A-06"
+
+  # A-07: 查看 QoS 状态
+  - send: "/adaptive qos"
+    tag: "A-07"
+
+  # A-08: QoS on
+  - send: "/adaptive qos on"
+    expect_contains: "on"
+    tag: "A-08"
+
+  # A-09: QoS off
+  - send: "/adaptive qos off"
+    expect_contains: "off"
+    tag: "A-09"
+
+  # A-10: QoS 1 = on
+  - send: "/adaptive qos 1"
+    expect_contains: "on"
+    tag: "A-10"
+
+  # A-11: QoS 0 = off
+  - send: "/adaptive qos 0"
+    expect_contains: "off"
+    tag: "A-11"
+
+  # A-12: 未知选项
+  - send: "/adaptive blahblah"
+    expect_contains: "Unknown"
+    tag: "A-12"
+
+  # A-13: QoS 非法值
+  - send: "/adaptive qos maybe"
+    expect_contains: "Invalid"
+    tag: "A-13"
+
+  # ===== A2. 模式切换后行为验证（需要 2+ Provider）=====
+
+  # A-14: off 模式下发问题，检查只有一个 provider 的 ok 增加
+  - send: "/adaptive off"
+    tag: "A-14-pre"
+
+  - send: "1+1等于几"
+    tag: "A-14"
+    max_wait: 120
+
+  - send: "/adaptive"
+    tag: "A-14-check"
+
+  # A-15: hedge 模式下发问题，可能两个 provider 的 ok 都增加
+  - send: "/adaptive hedge"
+    tag: "A-15-pre"
+
+  - send: "1+1等于几"
+    tag: "A-15"
+    max_wait: 120
+
+  - send: "/adaptive"
+    tag: "A-15-check"
+
+  # A-16: lane 模式连续 3 条简短问题，current provider 可能变化
+  - send: "/adaptive lane"
+    tag: "A-16-pre"
+
+  - send: "什么是HTTP"
+    tag: "A-16a"
+    max_wait: 120
+
+  - send: "什么是TCP"
+    tag: "A-16b"
+    max_wait: 120
+
+  - send: "什么是UDP"
+    tag: "A-16c"
+    max_wait: 120
+
+  - send: "/adaptive"
+    tag: "A-16-check"
+
+  # A-17: hedge 模式下查看延迟 EMA 应为正数
+  - send: "/adaptive hedge"
+    tag: "A-17-pre"
+
+  - send: "/adaptive"
+    expect_contains: "latency"
+    tag: "A-17"
+
+  # ===== A3. 运行时切换与状态一致性 =====
+
+  # A-18: 连续切换，最终状态应与最后设置一致
+  - send: "/adaptive off"
+    tag: "A-18a"
+
+  - send: "/adaptive hedge"
+    tag: "A-18b"
+
+  - send: "/adaptive lane"
+    tag: "A-18c"
+
+  - send: "/adaptive off"
+    tag: "A-18d"
+
+  - send: "/adaptive"
+    expect_contains: "off"
+    tag: "A-18-verify"
+
+  # A-19: hedge + qos on 同时显示（两者独立）
+  - send: "/adaptive hedge"
+    tag: "A-19a"
+
+  - send: "/adaptive qos on"
+    tag: "A-19b"
+
+  - send: "/adaptive"
+    expect_contains: "hedge"
+    tag: "A-19-verify"
+
+  # ===== A4. 单 Provider 降级提示 =====
+  # 注意：以下测试仅在 1 个 Provider 部署时有效，2+ Provider 时会正常切换不报警告
+
+  # A-20: 单 Provider 下 hedge 应有警告
+  - send: "/adaptive hedge"
+    tag: "A-20"
+    # expect_contains: "Only 1 provider"  # 仅单 Provider 时启用
+
+  # A-21: 单 Provider 下 lane 应有警告
+  - send: "/adaptive lane"
+    tag: "A-21"
+    # expect_contains: "Only 1 provider"  # 仅单 Provider 时启用
+
+  # ===== Cleanup =====
+  - send: "/adaptive off"
+    tag: "CLEANUP"
+
+  - send: "/adaptive qos off"
+    tag: "CLEANUP-QOS"

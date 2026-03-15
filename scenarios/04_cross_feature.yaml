@@ -1,0 +1,134 @@
+name: "Cross-Feature Integration"
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  # ===== X-01: 新会话中设置 queue 模式 =====
+
+  - send: "/new test-cross"
+    expect_contains: "test-cross"
+    tag: "X-01a"
+
+  - send: "/queue collect"
+    expect_contains: "Collect"
+    tag: "X-01b"
+
+  - send: "/queue"
+    expect_contains: "Collect"
+    tag: "X-01"
+
+  # ===== X-02: Speculative + Hedge 同时工作 =====
+  # 两条消息都应得到回复，adaptive 指标应有更新
+
+  - send: "/adaptive hedge"
+    tag: "X-02-adaptive"
+
+  - send: "/queue spec"
+    tag: "X-02-queue"
+
+  - send: "请解释什么是DNS，要详细说明递归查询和迭代查询的区别"
+    tag: "X-02a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "1+1等于几"
+    tag: "X-02b"
+    max_wait: 180
+
+  - send: "/adaptive"
+    expect_contains: "Adaptive"
+    tag: "X-02-check"
+
+  # ===== X-03: Speculative 模式下发 /adaptive 命令 =====
+  # 斜杠命令不应被当作 overflow 任务
+
+  - send: "/queue spec"
+    tag: "X-03-pre"
+
+  - send: "请详细解释HTTP/2和HTTP/3的区别，包括多路复用、头部压缩和QUIC协议"
+    tag: "X-03a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "/adaptive"
+    expect_contains: "Adaptive"
+    tag: "X-03"
+
+  # 等待之前的长任务完成
+  - send: "/new"
+    tag: "X-03-wait"
+    max_wait: 120
+
+  # ===== X-04: Speculative 模式下发 /queue 命令 =====
+
+  - send: "/queue spec"
+    tag: "X-04-pre"
+
+  - send: "请详细解释WebSocket协议的握手过程和帧格式"
+    tag: "X-04a"
+    settle_timeout: 1
+    max_wait: 5
+
+  - send: "/queue"
+    expect_contains: "Speculative"
+    tag: "X-04"
+
+  # 等待长任务完成
+  - send: "/new"
+    tag: "X-04-wait"
+    max_wait: 120
+
+  # ===== X-05: 会话隔离 + 上下文恢复 =====
+
+  - send: "/new session-a"
+    expect_contains: "session-a"
+    tag: "X-05a"
+
+  - send: "关键词：橘子"
+    tag: "X-05b"
+    max_wait: 120
+
+  - send: "/new session-b"
+    expect_contains: "session-b"
+    tag: "X-05c"
+
+  - send: "关键词：西瓜"
+    tag: "X-05d"
+    max_wait: 120
+
+  - send: "/s session-a"
+    expect_contains: "session-a"
+    tag: "X-05e"
+
+  - send: "我的关键词是什么？"
+    tag: "X-05"
+    max_wait: 120
+    expect_not_contains: "西瓜"
+    on_response:
+      - contains: "橘子"
+        steps:
+          - tag: "X-05:PASS session isolation works"
+      - default:
+          steps:
+            - tag: "X-05:FAIL context not restored"
+
+  # ===== Cleanup =====
+  - send: "/delete test-cross"
+    tag: "CLEANUP-1"
+
+  - send: "/delete session-a"
+    tag: "CLEANUP-2"
+
+  - send: "/delete session-b"
+    tag: "CLEANUP-3"
+
+  - send: "/adaptive off"
+    tag: "CLEANUP-4"
+
+  - send: "/queue spec"
+    tag: "CLEANUP-5"
+
+  - send: "/s"
+    tag: "CLEANUP-6"

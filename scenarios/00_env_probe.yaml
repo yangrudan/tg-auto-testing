@@ -1,0 +1,24 @@
+name: "Environment Probe"
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  # E-01: 查看 adaptive 状态，确认 provider 数量
+  - send: "/adaptive"
+    expect_contains: "Adaptive"
+    tag: "E-01"
+
+  # E-02: 查看 queue 模式
+  - send: "/queue"
+    tag: "E-02"
+
+  # E-03: 查看会话列表
+  - send: "/sessions"
+    tag: "E-03"
+
+  # E-04: 发普通消息，确认系统可用
+  - send: "你好"
+    tag: "E-04"
+    max_wait: 120

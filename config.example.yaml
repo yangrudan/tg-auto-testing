@@ -1,0 +1,5 @@
+telegram:
+  api_id: 12345                  # 从 my.telegram.org 获取
+  api_hash: "your_api_hash_here" # 从 my.telegram.org 获取
+  bot: "@your_bot_username"      # 你的 crew-rs bot 的 Telegram @username
+  session_file: "crew_tester"    # 可选，session 文件名（默认 crew_tester）
