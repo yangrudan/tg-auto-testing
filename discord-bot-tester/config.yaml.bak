@@ -1,0 +1,5 @@
+discord:
+  token: "Q4NTg1NjI2NTgxMTc4Nzg1OQ.GptnBH.kAoC2MPDNO1tSxNAUGY-0cA4H2LaFWHMDAMnuY"  # 替换为你的 Discord Bot Token
+  bot: "test_bot"           # 替换为你的 Bot 用户名（不含 #0000）
+  guild_id: 123456789012345678   # 替换为目标服务器 ID（可选，默认使用第一个服务器）
+  channel_name: "test-channel"   # 替换为目标频道名称（可选，默认使用第一个文本频道）

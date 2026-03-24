@@ -1,0 +1,12 @@
+"name: "Hello World Test"
+bot: "your_bot_name"  # 覆盖 config.yaml 中的 bot 名称
+
+defaults:
+  settle_timeout: 5
+  max_wait: 60
+
+steps:
+  - send: "Hello"
+    tag: "H-01"
+    expect_contains: "hello"
+"
