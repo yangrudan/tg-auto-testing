@@ -70,10 +70,13 @@ async def main():
             print(f"  [{ts}] DEL  id={message.id}")
 
     # -- 连接并发送 --
-    await client.start(token)
+    # client.start() 是一个会一直运行直到关闭的协程，
+    # 如果直接 await 它，后续的发送/等待逻辑不会被执行。
+    # 因此把它放到后台任务中并等待 ready，再继续后续操作。
+    client_task = asyncio.create_task(client.start(token))
 
-    # 等待 ready 事件
-    await asyncio.sleep(2)
+    # 等待 ready 事件（client.start 已在后台运行）
+    await client.wait_until_ready()
 
     # 找到目标频道
     target_channel = None
