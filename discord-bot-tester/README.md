@@ -182,6 +182,25 @@ Results:  1 PASS / 0 FAIL / 0 TIMEOUT / 1 total
   Report:   output/2026-03-14T21-30-00_Hello_World_Test/report.md
 ```
 
+## 基于日志的 YAML 校验（octos / bot_events.log）
+
+项目中新增了一个轻量脚本 `run_yaml_log_check.py`，用于对 `octos` / `e2e_log` 产生的 JSONL 日志进行 YAML 驱动的断言校验，适合 CI 中仅基于日志验证触发/解析结果的场景。
+
+用法示例：
+
+```bash
+python3 run_yaml_log_check.py scenarios/01-hello.yaml --log-file ./bot_events.log
+```
+
+支持的 Step 类型例子：
+
+- `wait_for_test_trigger`: 等待 `test_trigger` 事件（匹配 `tc_id` / `correlation_id`）
+- `expect_event`: 等待任意 `event` 并匹配其 `payload` 中的键值
+- `sleep`: 在场景中插入等待
+
+该脚本会轮询并在超时失败时以非 0 返回码退出，便于 CI 报告。
+
+
 ### Settle Detection（等待策略）
 
 tester.py 不使用固定等待时间。发送消息后启动一个滑动窗口计时器：

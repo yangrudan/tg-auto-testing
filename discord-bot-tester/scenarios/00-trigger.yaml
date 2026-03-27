@@ -1,0 +1,14 @@
+name: "Example log-driven test"
+steps:
+  - wait_for_test_trigger:
+      tc_id: TC-FM-02
+      correlation_id: run-20260326-001
+      timeout: 30
+      poll_interval: 1.0
+
+  - expect_event:
+      event: test_trigger
+      payload:
+        tc_id: TC-FM-02
+        correlation_id: run-20260326-001
+      timeout: 10

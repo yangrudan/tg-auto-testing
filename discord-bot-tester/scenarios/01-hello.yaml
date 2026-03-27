@@ -9,4 +9,3 @@ steps:
   - send: "Hello"
     tag: "H-01"
     expect_contains: "hello"
-"
